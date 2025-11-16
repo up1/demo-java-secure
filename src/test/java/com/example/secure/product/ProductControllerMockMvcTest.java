@@ -120,7 +120,7 @@ public class ProductControllerMockMvcTest {
     // ===============================================================
 
     @Test
-    void userShouldBeForbiddenToUpdateOthersProduct() throws Exception {
+    void userShouldBeAForbiddenToUpdateOthersProduct() throws Exception {
         // user1 attempts to update p002 (which is owned by admin)
         mockMvc.perform(put("/api/v1/products/" + productOwnedByAdmin)
                         .with(httpBasic(user1, pass1))
