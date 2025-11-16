@@ -26,6 +26,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/v1/products").hasRole("USER")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/products/**").hasRole("USER")
                         .requestMatchers(HttpMethod.DELETE, "/api/v1/products/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.GET, "/api/v1/fetch-external").authenticated()
                         .anyRequest().authenticated()
                 )
                 .httpBasic(h -> {});
