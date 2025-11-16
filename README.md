@@ -14,3 +14,4 @@ $mvnw clean test
 * Input validation (API8)
 * Unrestricted Resource Consumption (Rate Limiting) (API4)
 * Server Side Request Forgery (SSRF) (API7)
+* Unsafe Consumption of APIs (API10)
