@@ -1,6 +1,7 @@
 package com.example.secure.product;
 
 import com.example.secure.config.SecurityConfig;
+import com.example.secure.global.RateLimitingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * It uses Spring's MockMvc for simulating HTTP requests.
  */
 @WebMvcTest(ProductController.class)
-@Import({SecurityConfig.class, ProductService.class}) // Import SecurityConfig and ProductService for full context
+@Import({SecurityConfig.class, ProductService.class, RateLimitingService.class}) // Import the new RateLimitingService
 public class ProductControllerMockMvcTest {
 
     // --- Test Data ---
@@ -38,6 +39,10 @@ public class ProductControllerMockMvcTest {
     private MockMvc mockMvc;
     @Autowired
     private ObjectMapper objectMapper;
+
+    // Inject the service to simulate hitting the rate limit
+    @Autowired
+    private RateLimitingService rateLimitingService;
 
     public ProductControllerMockMvcTest() {
         // Setup DTO for updating existing products
@@ -137,6 +142,39 @@ public class ProductControllerMockMvcTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validUpdateDto)))
                 .andExpect(status().isOk()); // API1 BOLA Check (Success)
+    }
+
+    // ===============================================================
+    // API4: Unrestricted Resource Consumption (Rate Limiting) Test
+    // ===============================================================
+
+    @Test
+    void userShouldBeRateLimitedOnExcessiveRequests() throws Exception {
+        // Exhaust the 5 tokens for user 'admin' for demonstration purposes
+        // Note: We use the injected service to simulate rapid concurrent access,
+        // as MockMvc runs tests sequentially, which doesn't accurately test real concurrency.
+        // For sequential testing, we just hit the limit repeatedly.
+
+        // The limit is 5 requests per 60 seconds. We hit it 6 times.
+        final String endpoint = "/api/v1/products";
+
+        // 1st to 5th request should succeed (consuming all tokens)
+        for (int i = 0; i < 5; i++) {
+            mockMvc.perform(get(endpoint)
+                            .with(httpBasic(admin, passAdmin)))
+                    .andExpect(status().isOk());
+        }
+
+        // 6th request should fail with 429
+        mockMvc.perform(get(endpoint)
+                        .with(httpBasic(admin, passAdmin)))
+                .andExpect(status().isTooManyRequests()) // API4 Check (Failure)
+                .andExpect(header().string("Retry-After", "60"));
+
+        // 7th request should also fail
+        mockMvc.perform(get(endpoint)
+                        .with(httpBasic(admin, passAdmin)))
+                .andExpect(status().isTooManyRequests()); // API4 Check (Failure)
     }
 
     // ===============================================================

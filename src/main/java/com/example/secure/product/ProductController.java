@@ -1,5 +1,6 @@
 package com.example.secure.product;
 
+import com.example.secure.global.RateLimitingService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,19 +16,31 @@ import java.util.stream.Collectors;
 public class ProductController {
 
     private final ProductService productService;
+    private final RateLimitingService rateLimitingService;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, RateLimitingService rateLimitingService) {
         this.productService = productService;
+        this.rateLimitingService = rateLimitingService;
     }
 
     /**
      * Retrieves all products. Accessible to all authenticated users.
      */
     @GetMapping
-    public List<ProductResponseDTO> getAllProducts() {
-        return productService.findAll().stream()
+    public ResponseEntity<List<ProductResponseDTO>> getAllProducts() {
+
+        // Add rate limit !!
+        String currentUserId = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (!rateLimitingService.allowRequest(currentUserId)) {
+            // Respond with 429 Too Many Requests if the limit is exceeded
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .header("Retry-After", "60")
+                    .build();
+        }
+
+        return ResponseEntity.ok(productService.findAll().stream()
                 .map(ProductResponseDTO::new) // API3: Use DTO for output
-                .collect(Collectors.toList());
+                .collect(Collectors.toList()));
     }
 
     /**
