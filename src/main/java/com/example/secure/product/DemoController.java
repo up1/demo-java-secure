@@ -7,13 +7,15 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Optional;
+
 @RestController
 public class DemoController {
 
-    private final UrlSecurityService urlSecurityService;
+    private final ExternalApiService externalApiService;
 
-    public DemoController(UrlSecurityService urlSecurityService) {
-        this.urlSecurityService = urlSecurityService;
+    public DemoController(ExternalApiService externalApiService) {
+        this.externalApiService = externalApiService;
     }
 
     /**
@@ -26,15 +28,23 @@ public class DemoController {
     public ResponseEntity<String> fetchExternalContent(@RequestParam String url) {
 
         // --- SSRF Mitigation (API7) ---
-        if (!urlSecurityService.isUrlSafe(url)) {
+        if (!externalApiService.isUrlSafe(url)) {
             // Log the attempt and return a generic error
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body("Error: The provided URL is not safe or is restricted.");
         }
         // ------------------------------
 
-        String content = urlSecurityService.fetchContent(url);
+        // --- API10: Unsafe Consumption Mitigation ---
+        Optional<TodoResponseDTO> result = externalApiService.fetchAndValidateContent(url);
 
-        return ResponseEntity.ok(content);
+        if (result.isPresent()) {
+            // Success: Return the strictly validated and parsed object string
+            return ResponseEntity.ok(result.get().toString());
+        } else {
+            // Failure: Either the external API failed (timeout/circuit breaker) or the data was malformed (output validation).
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body("Error: External API failed due to timeout, failure threshold (Circuit Breaker), or invalid data structure (API10).");
+        }
     }
 }

@@ -14,7 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(DemoController.class)
-@Import({SecurityConfig.class, ProductService.class, RateLimitingService.class, UrlSecurityService.class}) // Import UrlSecurityService
+@Import({SecurityConfig.class, ProductService.class, RateLimitingService.class, ExternalApiService.class}) // Import UrlSecurityService
 class DemoControllerMockMvcTest {
 
     // --- Test Data ---
@@ -24,20 +24,22 @@ class DemoControllerMockMvcTest {
     private MockMvc mockMvc;
 
     // ===============================================================
-    // API7: Server Side Request Forgery (SSRF) Tests
+    // API7 & API10: SSRF and Unsafe Consumption Tests (Validation/Resilience)
     // ===============================================================
 
     @Test
-    void userShouldBeAllowedToFetchSafeExternalUrl() throws Exception {
-        // This host is explicitly listed in the UrlSecurityService allow-list
+    void userShouldBeAllowedToFetchSafeUrlWithOutputValidation() throws Exception {
+        // This test validates:
+        // 1. SSRF Check (API7): Host is in allow-list.
+        // 2. Output Validation (API10): The JSON structure is correctly parsed into TodoResponseDTO.
         String safeUrl = "https://jsonplaceholder.typicode.com/todos/1";
 
         mockMvc.perform(get("/api/v1/fetch-external")
                         .param("url", safeUrl)
                         .with(httpBasic(user1, pass1)))
-                .andExpect(status().isOk()) // API7 Check (Success)
-                // Check for expected content (part of the truncated JSON response)
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("userId")));
+                .andExpect(status().isOk())
+                // Checks for the specific format output by TodoResponseDTO.toString()
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("[External Data] ID: 1, UserID: 1, Title: 'delectus aut autem', Completed: false")));
     }
 
     @Test
