@@ -1,0 +1,27 @@
+{
+	"info": {
+		"_postman_id": "b29e97c7-f7ff-477f-936e-c48e423a079d",
+		"name": "java-secure-products",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "1453931",
+		"_collection_link": "https://red-firefly-245852.postman.co/workspace/msa202510~794b741d-7d72-432e-93bd-f9633416ee51/collection/1453931-b29e97c7-f7ff-477f-936e-c48e423a079d?action=share&source=collection_link&creator=1453931"
+	},
+	"item": [
+		{
+			"name": "Get all products",
+			"request": {
+				"auth": {
+					"type": "basic",
+					"basic": {
+						"password": "password",
+						"username": "user1"
+					}
+				},
+				"method": "GET",
+				"header": [],
+				"url": "http://localhost:8080/api/v1/products"
+			},
+			"response": []
+		}
+	]
+}
