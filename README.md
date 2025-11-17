@@ -1,6 +1,4 @@
-# Demo secure code with Java and Spring Boot
-
-
+# Demo secure code with Java and Spring Boot ...
 ## Run
 ```
 $mvnw clean test
