@@ -1,11 +1,10 @@
 package com.example.secure.product;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.stereotype.Service;
-
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -13,8 +12,13 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import org.springframework.stereotype.Service;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class ExternalApiService {
@@ -33,7 +37,8 @@ public class ExternalApiService {
     private Instant circuitOpenTime = Instant.MIN;
 
     public ExternalApiService(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+        // Create a defensive copy to prevent external modification
+        this.objectMapper = objectMapper.copy();
         // API10: Configure HTTP client with a connection timeout
         this.httpClient = HttpClient.newBuilder().connectTimeout(API_TIMEOUT).build();
     }
@@ -49,12 +54,12 @@ public class ExternalApiService {
             String host = uri.getHost();
 
             // 1. Protocol Validation: Only allow HTTP(s)
-            if (protocol == null || !protocol.toLowerCase().matches("https?")) {
+            if (protocol == null || !protocol.toLowerCase(Locale.ROOT).matches("https?")) {
                 return false;
             }
 
             // 2. Allow-list Validation: Must be on the allowed host list
-            if (host == null || !ALLOWED_HOSTS.contains(host.toLowerCase())) {
+            if (host == null || !ALLOWED_HOSTS.contains(host.toLowerCase(Locale.ROOT))) {
                 return false;
             }
 
@@ -68,7 +73,7 @@ public class ExternalApiService {
 
             return true;
 
-        } catch (Exception e) {
+        } catch (URISyntaxException | UnknownHostException e) {
             return false;
         }
     }

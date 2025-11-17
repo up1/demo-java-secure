@@ -1,15 +1,26 @@
 package com.example.secure.product;
 
-import com.example.secure.global.RateLimitingService;
-import jakarta.validation.Valid;
+import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
-import java.util.stream.Collectors;
+import com.example.secure.global.RateLimitingService;
+
+import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/products")
@@ -19,8 +30,8 @@ public class ProductController {
     private final RateLimitingService rateLimitingService;
 
     public ProductController(ProductService productService, RateLimitingService rateLimitingService) {
-        this.productService = productService;
-        this.rateLimitingService = rateLimitingService;
+        this.productService = Objects.requireNonNull(productService, "productService cannot be null");
+        this.rateLimitingService = Objects.requireNonNull(rateLimitingService, "rateLimitingService cannot be null");
     }
 
     /**
