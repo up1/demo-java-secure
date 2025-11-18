@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,6 +28,14 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/products")
 public class ProductController {
 
+    // Add log
+    private static final Logger SECURITY_LOGGER = LoggerFactory.getLogger(ProductController.class);
+
+    // Add deprecated api
+    private static final String DEPRECATION_HEADER = "X-API-Deprecation-Notice";
+    private static final String DEPRECATION_MESSAGE = "This endpoint is deprecated and will be retired. Please migrate to /api/v2/products.";
+
+
     private final ProductService productService;
     private final RateLimitingService rateLimitingService;
 
@@ -43,15 +53,22 @@ public class ProductController {
         // Add rate limit !!
         String currentUserId = SecurityContextHolder.getContext().getAuthentication().getName();
         if (!rateLimitingService.allowRequest(currentUserId)) {
+            // Add log
+            SECURITY_LOGGER.warn("SECURITY-API4-FAIL: Global rate limit exceeded for user: {}", currentUserId);
+
             // Respond with 429 Too Many Requests if the limit is exceeded
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
                     .header("Retry-After", "60")
+                    .header(DEPRECATION_HEADER, DEPRECATION_MESSAGE)
                     .build();
         }
 
-        return ResponseEntity.ok(productService.findAll().stream()
-                .map(ProductResponseDTO::new) // API3: Use DTO for output
-                .collect(Collectors.toList()));
+        // API3 Defense Check (Read): Ensure sensitive fields are filtered out by the DTO.
+        return ResponseEntity.ok()
+                .header(DEPRECATION_HEADER, DEPRECATION_MESSAGE)
+                .body(productService.findAll().stream()
+                        .map(ProductResponseDTO::new)
+                        .collect(Collectors.toList()));
     }
 
     /**
@@ -96,8 +113,11 @@ public class ProductController {
 
         if (!product.getOwnerId().equals(currentUserId)) {
             // Forbidden: The authenticated user is trying to modify a resource they do not own.
+            SECURITY_LOGGER.error("SECURITY-API1-BOLA: User {} attempted unauthorized update on product ID {} owned by {}",
+                    currentUserId, id, product.getOwnerId());
             return new ResponseEntity<>(HttpStatus.FORBIDDEN);
         }
+
         // -----------------------------------------------------------
 
         Product updatedProduct = productService.update(id, updateDto);
@@ -116,6 +136,11 @@ public class ProductController {
         }
 
         productService.delete(id);
+
+        // Add log
+        SECURITY_LOGGER.info("SECURITY-API5-AUDIT: Admin {} successfully deleted product ID {}",
+                SecurityContextHolder.getContext().getAuthentication().getName(), id);
+
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 }
