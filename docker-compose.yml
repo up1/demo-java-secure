@@ -1,0 +1,7 @@
+services:
+  zap:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: zap
+    volumes:
+      - ./zap-data:/zap/wrk/:rw
+    command: zap-api-scan.py -f openapi -t openapi.yml -r report.html -x report.xml
